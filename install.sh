@@ -263,10 +263,7 @@ blocking:
       cooldown: 5s
     strategy: failOnError
     concurrency: 4
-
-  cache:
-    path: /app/cache
-
+    
 caching:
   minTime: 5m
   maxTime: 30m
