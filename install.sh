@@ -9,14 +9,22 @@ RESOLVED_STUB="/etc/systemd/resolved.conf.d/blocky.conf"
 # --- Автозапрос прав root (Sudo) ---
 require_root() {
   if [[ $EUID -ne 0 ]]; then
-    echo "🔑 Для установки требуются права root. Запрашиваю sudo..."
-    if command -v sudo &>/dev/null; then
+    # Проверяем, запущен ли скрипт из реального файла, а не через pipe/subshell
+    if [[ -f "$0" && "$0" != *"bash"* && "$0" != *"sh"* && "$0" != *"/dev/fd/"* && "$0" != *"/proc/"* ]]; then
+      echo "🔑 Для установки требуются права root. Запрашиваю sudo..."
       exec sudo bash "$0" "$@"
     else
-      echo "✗ Команда sudo не найдена. Запустите скрипт от root." >&2
+      echo "❌ Для установки требуются права root!" >&2
+      echo "" >&2
+      echo "Запустите команду сразу с sudo:" >&2
+      echo "  curl -fsSL -L ad.shtrmx.ru | sudo bash" >&2
+      echo "  # или" >&2
+      echo "  sudo bash <(curl -fsSL -L ad.shtrmx.ru)" >&2
+      echo "" >&2
       exit 1
     fi
   fi
+}
 }
 
 detect_distro() {
