@@ -1,26 +1,21 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# --- Значения по умолчанию ---
+# --- Default Variables ---
 INSTALL_DIR="${BLOCKY_INSTALL_DIR:-/opt/blocky}"
 BLOCKY_TAG="${BLOCKY_TAG:-latest}"
 RESOLVED_STUB="/etc/systemd/resolved.conf.d/blocky.conf"
 
-# --- Автозапрос прав root (Sudo) ---
+# --- Root Privileges Check ---
 require_root() {
   if [[ $EUID -ne 0 ]]; then
-    # Проверяем, запущен ли скрипт из реального файла, а не через pipe/subshell
     if [[ -f "$0" && "$0" != *"bash"* && "$0" != *"sh"* && "$0" != *"/dev/fd/"* && "$0" != *"/proc/"* ]]; then
-      echo "🔑 Для установки требуются права root. Запрашиваю sudo..."
+      echo "🔑 Root privileges required. Requesting sudo..."
       exec sudo bash "$0" "$@"
     else
-      echo "❌ Для установки требуются права root!" >&2
-      echo "" >&2
-      echo "Запустите команду сразу с sudo:" >&2
-      echo "  curl -fsSL -L ad.shtrmx.ru | sudo bash" >&2
-      echo "  # или" >&2
-      echo "  sudo bash <(curl -fsSL -L ad.shtrmx.ru)" >&2
-      echo "" >&2
+      echo "❌ Root privileges required!" >&2
+      echo "Run the command with sudo:" >&2
+      echo "  sudo bash ./installer.sh" >&2
       exit 1
     fi
   fi
@@ -35,11 +30,10 @@ detect_distro() {
   fi
 }
 
-# --- Автоустановка gum ---
+# --- Install UI Tool (gum) ---
 install_gum() {
   command -v gum &>/dev/null && return 0
-
-  echo "📦 Установка утилиты UI (gum)..."
+  echo "📦 Installing UI utility (gum)..."
   local distro
   distro=$(detect_distro)
 
@@ -69,7 +63,7 @@ install_gum_binary() {
   case "$arch" in
     x86_64) arch="x86_64" ;;
     aarch64|arm64) arch="arm64" ;;
-    *) echo "Неподдерживаемая архитектура: $arch" >&2; exit 1 ;;
+    *) echo "Unsupported architecture: $arch" >&2; exit 1 ;;
   esac
 
   version=$(curl -fsSL https://api.github.com/repos/charmbracelet/gum/releases/latest | grep -oP '"tag_name": "\K[^"]+')
@@ -82,41 +76,34 @@ install_gum_binary() {
   rm -rf "$tmp"
 }
 
-# --- Интерактивная настройка параметров ---
+# --- Interactive Settings ---
 configure_settings() {
-  INSTALL_DIR=$(gum input --value "$INSTALL_DIR" --header "Путь к директории установки Blocky:" --placeholder "/opt/blocky")
-  BLOCKY_TAG=$(gum input --value "$BLOCKY_TAG" --header "Тег / Версия образа Blocky (например, latest, v0.23):" --placeholder "latest")
+  INSTALL_DIR=$(gum input --value "$INSTALL_DIR" --header "Blocky Installation Directory:" --placeholder "/opt/blocky")
+  BLOCKY_TAG=$(gum input --value "$BLOCKY_TAG" --header "Blocky Docker Tag (e.g., latest, v0.24):" --placeholder "latest")
 
-  gum style --foreground 82 "Путь: $INSTALL_DIR"
-  gum style --foreground 82 "Версия: ghcr.io/0xerr0r/blocky:$BLOCKY_TAG"
+  gum style --foreground 82 "Path: $INSTALL_DIR"
+  gum style --foreground 82 "Version: ghcr.io/0xerr0r/blocky:$BLOCKY_TAG"
 }
 
-# --- Проверка зависимостей ---
+# --- Dependency Check ---
 check_dependency() {
   local bin=$1 label=$2
   if command -v "$bin" &>/dev/null; then
-    gum style --foreground 42 "✓ $label найден"
+    gum style --foreground 42 "✓ $label found"
     return 0
   fi
-  gum style --foreground 196 "✗ $label отсутствует"
+  gum style --foreground 196 "✗ $label is missing"
   return 1
 }
 
 install_docker() {
   local distro
   distro=$(detect_distro)
-
-  gum spin --spinner dot --title "Устанавливаю Docker..." -- bash -c "
+  gum spin --spinner dot --title "Installing Docker..." -- bash -c "
     case '$distro' in
-      arch|manjaro|endeavouros)
-        pacman -Sy --noconfirm docker docker-compose
-        ;;
-      fedora|rhel|centos)
-        dnf install -y docker docker-compose-plugin
-        ;;
-      *)
-        curl -fsSL https://get.docker.com | sh
-        ;;
+      arch|manjaro|endeavouros) pacman -Sy --noconfirm docker docker-compose ;;
+      fedora|rhel|centos) dnf install -y docker docker-compose-plugin ;;
+      *) curl -fsSL https://get.docker.com | sh ;;
     esac
     systemctl enable --now docker
   "
@@ -124,46 +111,45 @@ install_docker() {
 
 check_dependencies() {
   local missing=0
-
   check_dependency curl "curl" || missing=1
   check_dependency git "git" || missing=1
 
   if ! command -v docker &>/dev/null; then
-    gum style --foreground 196 "✗ Docker отсутствует"
-    if gum confirm "Установить Docker автоматически?"; then
+    gum style --foreground 196 "✗ Docker is missing"
+    if gum confirm "Install Docker automatically?"; then
       install_docker
     else
       missing=1
     fi
   else
-    gum style --foreground 42 "✓ Docker найден"
+    gum style --foreground 42 "✓ Docker found"
   fi
 
   if ! docker compose version &>/dev/null; then
-    gum style --foreground 196 "✗ Docker Compose plugin отсутствует"
+    gum style --foreground 196 "✗ Docker Compose plugin is missing"
     missing=1
   else
-    gum style --foreground 42 "✓ Docker Compose найден"
+    gum style --foreground 42 "✓ Docker Compose found"
   fi
 
   if [[ $missing -eq 1 ]]; then
-    gum style --foreground 196 "Ошибки зависимостей. Установка приостановлена."
-    return 1
+    gum style --foreground 196 "Dependency errors. Installation aborted."
+    exit 1
   fi
 }
 
-# --- Генерация файлов конфигурации ---
+# --- Setup Configuration Files ---
 setup_configs() {
   mkdir -p "$INSTALL_DIR"
 
   if [[ -f "$INSTALL_DIR/docker-compose.yml" || -f "$INSTALL_DIR/config.yml" ]]; then
-    if ! gum confirm "Файлы конфигурации уже существуют в $INSTALL_DIR. Перезаписать?"; then
-      gum style --foreground 244 "Пропускаем перезапись файлов."
+    if ! gum confirm "Configuration files already exist in $INSTALL_DIR. Overwrite?"; then
+      gum style --foreground 244 "Skipping configuration overwrite."
       return 0
     fi
   fi
 
-  gum spin --spinner dot --title "Запись docker-compose.yml и config.yml..." -- bash -c "
+  gum spin --spinner dot --title "Writing configuration files..." -- bash -c "
     cat > '$INSTALL_DIR/docker-compose.yml' <<'EOF'
 services:
   blocky:
@@ -175,7 +161,7 @@ services:
       - \"53:53/udp\"
       - \"4000:4000/tcp\"
     environment:
-      - TZ=Europe/Moscow
+      - TZ=UTC
     volumes:
       - ./config.yml:/app/config.yml
       - blocky_cache:/app/cache
@@ -197,70 +183,42 @@ EOF
 
     cat > '$INSTALL_DIR/config.yml' <<'EOF'
 upstreams:
-  init:
-    strategy: fast
   groups:
     default:
       - https://dns.cloudflare.com/dns-query
       - https://dns.quad9.net/dns-query
-      - tcp-tls:one.one.one.one
   strategy: parallel_best
-  timeout: 5s
+  timeout: 2s
 
 bootstrapDns:
-  - upstream: https://one.one.one.one/dns-query
+  - upstream: https://1.1.1.1/dns-query
     ips:
       - 1.1.1.1
-      - 1.0.0.1
 
 blocking:
   denylists:
     ads:
-      - https://adguardteam.github.io/AdGuardSDNSFilter/Filters/filter.txt
-      - https://raw.githubusercontent.com/hagezi/dns-blocklists/main/hosts/pro.txt
       - https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts
+      - https://adguardteam.github.io/AdGuardSDNSFilter/Filters/filter.txt
     malware:
       - https://raw.githubusercontent.com/hagezi/dns-blocklists/main/hosts/tif.txt
-      - https://urlhaus.abuse.ch/downloads/hostfile/
-    yandex_ads:
-      - |
-        an.yandex.ru
-        mc.yandex.ru
-        yabs.yandex.ru
-        yandexadexchange.net
-        yandex.ru/ads
-        awaps.yandex.ru
-        bs.yandex.ru
-        banners.adfox.ru
-        ads.adfox.ru
-        adfox.yandex.ru
-        an.yandex.com
-        strm.yandex.ru
-        strm.yandex.net
-
   clientGroupsBlock:
     default:
       - ads
       - malware
-      - yandex_ads
-
   blockType: zeroIp
   blockTTL: 6h
-
   loading:
-    refreshPeriod: 4h
+    refreshPeriod: 24h
     downloads:
       timeout: 60s
       attempts: 3
-      cooldown: 5s
-    strategy: fast
-    
+      cooldown: 10s
+
 caching:
   minTime: 5m
   maxTime: 30m
   prefetching: true
-  prefetchThreshold: 5
-  maxItemsCount: 100000
 
 ports:
   dns: 53
@@ -270,19 +228,33 @@ log:
   level: info
   format: text
   timestamp: true
-
-minTlsServeVersion: \"1.2\"
 EOF
   "
-
-  gum style --foreground 42 "✓ Файлы успешно созданы в $INSTALL_DIR"
+  gum style --foreground 42 "✓ Configuration created successfully in $INSTALL_DIR"
 }
 
-# --- Освобождение 53 порта и запуск ---
+# --- Start Container ---
 start_blocky() {
-  # Предварительно освобождаем 53 порт от systemd-resolved DNSStubListener
+  # Temporarily disable systemd-resolved stub to free port 53 if active
   if systemctl is-active --quiet systemd-resolved 2>/dev/null; then
-    gum spin --spinner dot --title "Освобождаем порт 53 (отключение DNSStubListener)..." -- bash -c "
+    mkdir -p "$(dirname "$RESOLVED_STUB")"
+    cat > "$RESOLVED_STUB" <<'EOF'
+[Resolve]
+DNSStubListener=no
+EOF
+    systemctl reload-or-restart systemd-resolved
+  fi
+
+  gum spin --spinner line --title "Pulling image and starting container..." -- \
+    docker compose -f "$INSTALL_DIR/docker-compose.yml" up -d --pull always
+
+  gum style --foreground 42 "✓ Blocky container started!"
+}
+
+# --- System DNS Management ---
+configure_system_dns() {
+  gum spin --spinner dot --title "Applying system DNS settings to route to Blocky..." -- bash -c "
+    if systemctl is-active --quiet systemd-resolved 2>/dev/null; then
       mkdir -p '$(dirname "$RESOLVED_STUB")'
       cat > '$RESOLVED_STUB' <<'EOF'
 [Resolve]
@@ -290,24 +262,7 @@ DNS=127.0.0.1
 DNSStubListener=no
 EOF
       systemctl reload-or-restart systemd-resolved
-    "
-  fi
-
-  gum spin --spinner line --title "Загрузка Docker-образа и запуск контейнера..." -- \
-    docker compose -f "$INSTALL_DIR/docker-compose.yml" up -d --pull always
-
-  gum style --foreground 42 "✓ Контейнер Blocky успешно поднят!"
-}
-
-# --- Настройка системного DNS ---
-configure_system_dns() {
-  if ! gum confirm "Направить системный DNS локально на 127.0.0.1 (blocky)?"; then
-    gum style --foreground 244 "Пропускаем настройку DNS."
-    return 0
-  fi
-
-  gum spin --spinner dot --title "Применение настроек DNS..." -- bash -c "
-    if systemctl is-active --quiet systemd-resolved 2>/dev/null; then
+      # Map resolv.conf to the systemd-resolved bypass file
       ln -sf /run/systemd/resolve/resolv.conf /etc/resolv.conf
     else
       [[ -L /etc/resolv.conf ]] && rm -f /etc/resolv.conf
@@ -317,102 +272,116 @@ options edns0
 EOF
     fi
   "
-  gum style --foreground 42 "✓ DNS системы успешно направлен на 127.0.0.1"
+  gum style --foreground 42 "✓ System DNS routed to 127.0.0.1"
 }
 
-# --- Проверка работоспособности ---
+restore_system_dns() {
+  gum spin --spinner dot --title "Restoring original system DNS settings..." -- bash -c "
+    if systemctl is-active --quiet systemd-resolved 2>/dev/null; then
+      rm -f '$RESOLVED_STUB'
+      systemctl reload-or-restart systemd-resolved
+      # Restore default systemd-resolved stub file mapping
+      ln -sf /run/systemd/resolve/stub-resolv.conf /etc/resolv.conf
+    else
+      [[ -L /etc/resolv.conf ]] && rm -f /etc/resolv.conf
+      cat > /etc/resolv.conf <<'EOF'
+nameserver 8.8.8.8
+nameserver 1.1.1.1
+EOF
+    fi
+  "
+  gum style --foreground 42 "✓ System DNS restored to default."
+}
+
+# --- Health and Status Check ---
 check_status() {
-  gum spin --spinner pulse --title "Ожидание запуска сервисов..." -- sleep 3
+  gum spin --spinner pulse --title "Waiting for services to initialize..." -- sleep 3
 
   local container_state
   container_state=$(docker inspect -f '{{.State.Status}}' blocky 2>/dev/null || echo "not_found")
 
   if [[ "$container_state" != "running" ]]; then
-    gum style --foreground 196 "✗ Контейнер blocky не запущен (статус: $container_state)"
-    docker compose -f "$INSTALL_DIR/docker-compose.yml" logs --tail=30 blocky
+    gum style --foreground 196 "✗ Blocky container is not running (Status: $container_state)"
     return 1
   fi
-  gum style --foreground 42 "✓ Контейнер blocky активен"
+  gum style --foreground 42 "✓ Blocky container is active"
 
-  # Проверка API с помощью spin
-  local api_ok=false
-  gum spin --spinner dot --title "Запрос к REST API (:4000)..." -- bash -c "
-    curl -fsS 'http://127.0.0.1:4000/api/blocking/status' &>/dev/null
-  " && api_ok=true || api_ok=false
-
-  if [[ "$api_ok" == "true" ]]; then
-    gum style --foreground 42 "✓ REST API работает на :4000"
+  if curl -fsS -m 2 'http://127.0.0.1:4000/api/blocking/status' &>/dev/null; then
+    gum style --foreground 42 "✓ REST API responding on port 4000"
   else
-    gum style --foreground 196 "✗ REST API не отвечает"
+    gum style --foreground 196 "✗ REST API is not responding"
   fi
 
-  # DNS-тест
   if command -v dig &>/dev/null; then
-    local dig_result=""
-    dig_result=$(dig @127.0.0.1 an.yandex.ru +short +time=3 2>/dev/null || true)
+    local dig_result
+    dig_result=$(dig @127.0.0.1 doubleclick.net +short +time=2 2>/dev/null || true)
     if [[ "$dig_result" == "0.0.0.0" ]]; then
-      gum style --foreground 42 "✓ Тестовый домен (an.yandex.ru) успешно заблокирован (0.0.0.0)"
+      gum style --foreground 42 "✓ Ad-blocking test successful (doubleclick.net returned 0.0.0.0)"
     else
-      gum style --foreground 214 "⚠ Ответ DNS: '${dig_result:-пусто}' (проверьте правила блокировки)"
+      gum style --foreground 214 "⚠ DNS response for test domain: '${dig_result:-empty}'. Check blocklists."
     fi
   else
-    gum style --foreground 244 "dig не найден, проверка резолвинга пропущена."
+    gum style --foreground 244 "dig utility not found. Skipping DNS test."
   fi
 
   gum style --border rounded --padding "1 2" --foreground 51 \
-    "Установка завершена! 🚀
-Порты: DNS (53), API (:4000)
-Директория: $INSTALL_DIR
-Просмотр логов: docker compose -f $INSTALL_DIR/docker-compose.yml logs -f"
+    "Blocky Operational 🚀
+Dir: $INSTALL_DIR
+Logs: docker compose -f $INSTALL_DIR/docker-compose.yml logs -f"
 }
 
-# --- Главное меню ---
+# --- Uninstall Logic ---
+uninstall_blocky() {
+  if ! gum confirm "Are you sure you want to completely uninstall Blocky and its data?"; then
+    gum style --foreground 244 "Uninstallation aborted."
+    return 0
+  fi
+
+  echo "🗑 Uninstalling Blocky..."
+  if [[ -f "$INSTALL_DIR/docker-compose.yml" ]]; then
+    docker compose -f "$INSTALL_DIR/docker-compose.yml" down -v || true
+  fi
+
+  rm -rf "$INSTALL_DIR"
+  restore_system_dns
+  gum style --foreground 42 "✓ Blocky has been completely removed."
+}
+
+# --- Main Menu ---
 menu() {
   while true; do
     echo ""
     local CHOICE
     CHOICE=$(gum choose \
-      "🚀 Полная установка (Все этапы)" \
-      "⚙️  Настроить параметры (Путь и Версия)" \
-      "📦 Проверить и установить зависимости" \
-      "📝 Создать/Обновить конфигурации" \
-      "🐳 Запустить / Перезапустить Blocky" \
-      "🌐 Направить системный DNS на Blocky" \
-      "🔍 Проверить статус и провести тесты" \
-      "❌ Выход")
+      "1. Full Installation (All Steps)" \
+      "2. Configure Settings (Path and Version)" \
+      "3. Install Dependencies" \
+      "4. Generate Configuration Files" \
+      "5. Start/Restart Blocky Container" \
+      "6. Install DNS (Route System via Blocky)" \
+      "7. Remove DNS (Restore Default System DNS)" \
+      "8. Check Status and Test" \
+      "9. Uninstall Blocky" \
+      "0. Exit")
 
     case "$CHOICE" in
-      "🚀 Полная установка (Все этапы)")
+      "1. "* )
         configure_settings
         check_dependencies
         setup_configs
         start_blocky
         configure_system_dns
         check_status
-        break
         ;;
-      "⚙️  Настроить параметры (Путь и Версия)")
-        configure_settings
-        ;;
-      "📦 Проверить и установить зависимости")
-        check_dependencies
-        ;;
-      "📝 Создать/Обновить конфигурации")
-        setup_configs
-        ;;
-      "🐳 Запустить / Перезапустить Blocky")
-        start_blocky
-        ;;
-      "🌐 Направить системный DNS на Blocky")
-        configure_system_dns
-        ;;
-      "🔍 Проверить статус и провести тесты")
-        check_status
-        ;;
-      "❌ Выход")
-        echo "До связи!"
-        exit 0
-        ;;
+      "2. "* ) configure_settings ;;
+      "3. "* ) check_dependencies ;;
+      "4. "* ) setup_configs ;;
+      "5. "* ) start_blocky ;;
+      "6. "* ) configure_system_dns ;;
+      "7. "* ) restore_system_dns ;;
+      "8. "* ) check_status ;;
+      "9. "* ) uninstall_blocky ;;
+      "0. "* ) exit 0 ;;
     esac
   done
 }
@@ -420,7 +389,7 @@ menu() {
 main() {
   require_root
   install_gum
-  gum style --border double --padding "1 4" --foreground 213 --bold "Blocky Interactive Installer"
+  gum style --border double --padding "1 4" --foreground 213 --bold "Blocky Installer & Manager"
   menu
 }
 
