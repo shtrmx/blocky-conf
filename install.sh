@@ -84,8 +84,6 @@ install_gum_binary() {
 
 # --- Интерактивная настройка параметров ---
 configure_settings() {
-  gum style --border rounded --padding "1 2" --foreground 213 "Параметры установки"
-
   INSTALL_DIR=$(gum input --value "$INSTALL_DIR" --header "Путь к директории установки Blocky:" --placeholder "/opt/blocky")
   BLOCKY_TAG=$(gum input --value "$BLOCKY_TAG" --header "Тег / Версия образа Blocky (например, latest, v0.23):" --placeholder "latest")
 
@@ -125,8 +123,6 @@ install_docker() {
 }
 
 check_dependencies() {
-  gum style --border rounded --padding "1 2" --foreground 213 "Проверка системных зависимостей"
-
   local missing=0
 
   check_dependency curl "curl" || missing=1
@@ -158,8 +154,6 @@ check_dependencies() {
 
 # --- Генерация файлов конфигурации ---
 setup_configs() {
-  gum style --border rounded --padding "1 2" --foreground 213 "Создание файлов конфигурации"
-
   mkdir -p "$INSTALL_DIR"
 
   if [[ -f "$INSTALL_DIR/docker-compose.yml" || -f "$INSTALL_DIR/config.yml" ]]; then
@@ -259,8 +253,7 @@ blocking:
       timeout: 60s
       attempts: 3
       cooldown: 5s
-    strategy: failOnError
-    concurrency: 4
+    strategy: fast
     
 caching:
   minTime: 5m
@@ -287,8 +280,6 @@ EOF
 
 # --- Освобождение 53 порта и запуск ---
 start_blocky() {
-  gum style --border rounded --padding "1 2" --foreground 213 "Запуск контейнера Blocky"
-
   # Предварительно освобождаем 53 порт от systemd-resolved DNSStubListener
   if systemctl is-active --quiet systemd-resolved 2>/dev/null; then
     gum spin --spinner dot --title "Освобождаем порт 53 (отключение DNSStubListener)..." -- bash -c "
@@ -310,8 +301,6 @@ EOF
 
 # --- Настройка системного DNS ---
 configure_system_dns() {
-  gum style --border rounded --padding "1 2" --foreground 213 "Настройка системного DNS"
-
   if ! gum confirm "Направить системный DNS локально на 127.0.0.1 (blocky)?"; then
     gum style --foreground 244 "Пропускаем настройку DNS."
     return 0
@@ -333,8 +322,6 @@ EOF
 
 # --- Проверка работоспособности ---
 check_status() {
-  gum style --border rounded --padding "1 2" --foreground 213 "Проверка статуса"
-
   gum spin --spinner pulse --title "Ожидание запуска сервисов..." -- sleep 3
 
   local container_state
