@@ -25,7 +25,6 @@ require_root() {
     fi
   fi
 }
-}
 
 detect_distro() {
   if [[ -f /etc/os-release ]]; then
@@ -228,7 +227,6 @@ blocking:
       - https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts
     malware:
       - https://raw.githubusercontent.com/hagezi/dns-blocklists/main/hosts/tif.txt
-      - https://raw.githubusercontent.com/hagezi/dns-blocklists/main/hosts/badware.hoster.txt
       - https://urlhaus.abuse.ch/downloads/hostfile/
     yandex_ads:
       - |
