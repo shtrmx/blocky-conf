@@ -4,6 +4,7 @@ set -euo pipefail
 # --- Default Variables ---
 INSTALL_DIR="${BLOCKY_INSTALL_DIR:-/opt/blocky}"
 BLOCKY_TAG="${BLOCKY_TAG:-latest}"
+BLOCKY_PORT="${BLOCKY_PORT:-53}"
 RESOLVED_STUB="/etc/systemd/resolved.conf.d/blocky.conf"
 
 # --- Root Privileges Check ---
@@ -80,9 +81,11 @@ install_gum_binary() {
 configure_settings() {
   INSTALL_DIR=$(gum input --value "$INSTALL_DIR" --header "Blocky Installation Directory:" --placeholder "/opt/blocky")
   BLOCKY_TAG=$(gum input --value "$BLOCKY_TAG" --header "Blocky Docker Tag (e.g., latest, v0.24):" --placeholder "latest")
+  BLOCKY_PORT=$(gum input --value "$BLOCKY_PORT" --header "Blocky DNS Port (53 for standalone, 5353 for FLClash chain):" --placeholder "53")
 
   gum style --foreground 82 "Path: $INSTALL_DIR"
   gum style --foreground 82 "Version: ghcr.io/0xerr0r/blocky:$BLOCKY_TAG"
+  gum style --foreground 82 "DNS Port: $BLOCKY_PORT"
 }
 
 # --- Dependency Check ---
@@ -149,24 +152,24 @@ setup_configs() {
     fi
   fi
 
-  gum spin --spinner dot --title "Writing configuration files..." -- bash -c "
-    cat > '$INSTALL_DIR/docker-compose.yml' <<'EOF'
+  # Используем unquoted EOF для подстановки переменных в docker-compose.yml
+  cat > "$INSTALL_DIR/docker-compose.yml" <<EOF
 services:
   blocky:
     image: ghcr.io/0xerr0r/blocky:${BLOCKY_TAG}
     container_name: blocky
     restart: unless-stopped
     ports:
-      - \"53:53/tcp\"
-      - \"53:53/udp\"
-      - \"4000:4000/tcp\"
+      - "${BLOCKY_PORT}:53/tcp"
+      - "${BLOCKY_PORT}:53/udp"
+      - "4000:4000/tcp"
     environment:
       - TZ=UTC
     volumes:
       - ./config.yml:/app/config.yml
       - blocky_cache:/app/cache
     healthcheck:
-      test: [\"CMD\", \"wget\", \"--spider\", \"-q\", \"http://localhost:4000/api/blocking/status\"]
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:4000/api/blocking/status"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -181,7 +184,7 @@ volumes:
   blocky_cache:
 EOF
 
-    cat > '$INSTALL_DIR/config.yml' <<'EOF'
+  cat > "$INSTALL_DIR/config.yml" <<'EOF'
 upstreams:
   groups:
     default:
@@ -198,13 +201,20 @@ bootstrapDns:
 blocking:
   denylists:
     ads:
-      - https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts
-      - https://adguardteam.github.io/AdGuardSDNSFilter/Filters/filter.txt
+      - https://raw.githubusercontent.com/hagezi/dns-blocklists/main/hosts/pro.txt
+      - https://raw.githubusercontent.com/hagezi/dns-blocklists/main/hosts/popupads.txt
+    youtube:
+      - https://raw.githubusercontent.com/hagezi/dns-blocklists/main/hosts/native.youtube.txt
+    yandex:
+      - https://raw.githubusercontent.com/1andrevich/Re-filter-lists/main/domains_all.lst
+      - https://raw.githubusercontent.com/Zalexanninev15/NoADS_RU/main/ads_list.txt
     malware:
       - https://raw.githubusercontent.com/hagezi/dns-blocklists/main/hosts/tif.txt
   clientGroupsBlock:
     default:
       - ads
+      - youtube
+      - yandex
       - malware
   blockType: zeroIp
   blockTTL: 6h
@@ -229,14 +239,14 @@ log:
   format: text
   timestamp: true
 EOF
-  "
+
   gum style --foreground 42 "✓ Configuration created successfully in $INSTALL_DIR"
 }
 
 # --- Start Container ---
 start_blocky() {
-  # Temporarily disable systemd-resolved stub to free port 53 if active
-  if systemctl is-active --quiet systemd-resolved 2>/dev/null; then
+  # Освобождаем порт 53 только если Blocky должен слушать порт 53
+  if [[ "$BLOCKY_PORT" == "53" ]] && systemctl is-active --quiet systemd-resolved 2>/dev/null; then
     mkdir -p "$(dirname "$RESOLVED_STUB")"
     cat > "$RESOLVED_STUB" <<'EOF'
 [Resolve]
@@ -248,11 +258,16 @@ EOF
   gum spin --spinner line --title "Pulling image and starting container..." -- \
     docker compose -f "$INSTALL_DIR/docker-compose.yml" up -d --pull always
 
-  gum style --foreground 42 "✓ Blocky container started!"
+  gum style --foreground 42 "✓ Blocky container started on port $BLOCKY_PORT!"
 }
 
 # --- System DNS Management ---
 configure_system_dns() {
+  if [[ "$BLOCKY_PORT" != "53" ]]; then
+    gum style --foreground 214 "⚠ Blocky is configured on port $BLOCKY_PORT (not 53). System /etc/resolv.conf won't be modified directly. Route traffic via FLClash/SmartDNS."
+    return 0
+  fi
+
   gum spin --spinner dot --title "Applying system DNS settings to route to Blocky..." -- bash -c "
     if systemctl is-active --quiet systemd-resolved 2>/dev/null; then
       mkdir -p '$(dirname "$RESOLVED_STUB")'
@@ -262,7 +277,6 @@ DNS=127.0.0.1
 DNSStubListener=no
 EOF
       systemctl reload-or-restart systemd-resolved
-      # Map resolv.conf to the systemd-resolved bypass file
       ln -sf /run/systemd/resolve/resolv.conf /etc/resolv.conf
     else
       [[ -L /etc/resolv.conf ]] && rm -f /etc/resolv.conf
@@ -280,7 +294,6 @@ restore_system_dns() {
     if systemctl is-active --quiet systemd-resolved 2>/dev/null; then
       rm -f '$RESOLVED_STUB'
       systemctl reload-or-restart systemd-resolved
-      # Restore default systemd-resolved stub file mapping
       ln -sf /run/systemd/resolve/stub-resolv.conf /etc/resolv.conf
     else
       [[ -L /etc/resolv.conf ]] && rm -f /etc/resolv.conf
@@ -314,7 +327,7 @@ check_status() {
 
   if command -v dig &>/dev/null; then
     local dig_result
-    dig_result=$(dig @127.0.0.1 doubleclick.net +short +time=2 2>/dev/null || true)
+    dig_result=$(dig @"127.0.0.1" -p "$BLOCKY_PORT" doubleclick.net +short +time=2 2>/dev/null || true)
     if [[ "$dig_result" == "0.0.0.0" ]]; then
       gum style --foreground 42 "✓ Ad-blocking test successful (doubleclick.net returned 0.0.0.0)"
     else
@@ -327,6 +340,7 @@ check_status() {
   gum style --border rounded --padding "1 2" --foreground 51 \
     "Blocky Operational 🚀
 Dir: $INSTALL_DIR
+DNS Port: $BLOCKY_PORT
 Logs: docker compose -f $INSTALL_DIR/docker-compose.yml logs -f"
 }
 
@@ -354,7 +368,7 @@ menu() {
     local CHOICE
     CHOICE=$(gum choose \
       "1. Full Installation (All Steps)" \
-      "2. Configure Settings (Path and Version)" \
+      "2. Configure Settings (Path, Tag, Port)" \
       "3. Install Dependencies" \
       "4. Generate Configuration Files" \
       "5. Start/Restart Blocky Container" \
