@@ -407,7 +407,7 @@ menu() {
 main() {
   require_root
   install_gum
-  gum style --border double --padding "1 4" --foreground 213 --bold "B.I.M. v1.1.1"
+  gum style --border double --padding "1 4" --foreground 213 --bold "B.I.M. v1.1.2"
   menu
 }
 
