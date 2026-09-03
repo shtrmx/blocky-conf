@@ -211,7 +211,7 @@ blocking:
       - https://raw.githubusercontent.com/Zalexanninev15/NoADS_RU/main/ads_list.txt
       - https://filters.adtidy.org/extension/chromium/filters/1.txt
     malware:
-      - https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/dnsmasq/tif.medium.txt
+      - https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/dnsmasq/tif.txt
   clientGroupsBlock:
     default:
       - ads
@@ -404,7 +404,7 @@ menu() {
 main() {
   require_root
   install_gum
-  gum style --border double --padding "1 4" --foreground 213 --bold "B.I.M. v1.1.0"
+  gum style --border double --padding "1 4" --foreground 213 --bold "B.I.M. v1.1.1"
   menu
 }
 
