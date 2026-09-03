@@ -201,16 +201,13 @@ bootstrapDns:
 blocking:
   denylists:
     ads:
-      - https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/dnsmasq/pro.txt
-      - https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/dnsmasq/popupads.txt
-      - https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/dnsmasq/fake.txt
+      - https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/wildcard/pro.txt
+      - https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/wildcard/popupads.txt
+      - https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/wildcard/fake.txt
     ru-ads:
       - https://raw.githubusercontent.com/Zalexanninev15/NoADS_RU/main/hosts/blocker.txt
     malware:
-      - https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/dnsmasq/tif.txt
-  allowlists:
-    ads:
-      - https://raw.githubusercontent.com/hagezi/dns-blocklists/main/whitelist-referral.txt
+      - https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/wildcard/tif.txt
   clientGroupsBlock:
     default:
       - ads
@@ -403,7 +400,7 @@ menu() {
 main() {
   require_root
   install_gum
-  gum style --border double --padding "1 4" --foreground 213 --bold "B.I.M. v1.1.3"
+  gum style --border double --padding "1 4" --foreground 213 --bold "B.I.M. v1.1.4"
   menu
 }
 
