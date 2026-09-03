@@ -162,11 +162,14 @@ services:
     ports:
       - "${BLOCKY_PORT}:53/tcp"
       - "${BLOCKY_PORT}:53/udp"
+      - "853:853/tcp"
+      - "443:443/tcp"
       - "4000:4000/tcp"
     environment:
       - TZ=UTC
     volumes:
       - ./config.yml:/app/config.yml
+      - ./certs:/app/certs:ro
       - blocky_cache:/app/cache
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://localhost:4000/api/blocking/status"]
@@ -216,7 +219,7 @@ blocking:
   blockType: zeroIp
   blockTTL: 6h
   loading:
-    refreshPeriod: 24h
+    refreshPeriod: 12h
     downloads:
       timeout: 60s
       attempts: 3
@@ -229,7 +232,12 @@ caching:
 
 ports:
   dns: 53
+  tls: 853
+  https: 443
   http: 4000
+
+certFile: /app/certs/server.crt
+keyFile: /app/certs/server.key
 
 log:
   level: info
@@ -253,7 +261,7 @@ EOF
   fi
 
   gum spin --spinner line --title "Pulling image and starting container..." -- \
-    docker compose -f "$INSTALL_DIR/docker-compose.yml" up -d --pull always
+    docker compose -f "$INSTALL_DIR/docker-compose.yml" up -d --build --pull always
 
   gum style --foreground 42 "✓ Blocky container started on port $BLOCKY_PORT!"
 }
@@ -400,7 +408,7 @@ menu() {
 main() {
   require_root
   install_gum
-  gum style --border double --padding "1 4" --foreground 213 --bold "B.I.M. v1.1.4"
+  gum style --border double --padding "1 4" --foreground 213 --bold "B.I.M. v1.2.0"
   menu
 }
 
