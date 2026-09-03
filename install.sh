@@ -201,14 +201,17 @@ bootstrapDns:
 blocking:
   denylists:
     ads:
-      - https://raw.githubusercontent.com/hagezi/dns-blocklists/refs/heads/main/dnsmasq/ultimate.mini.txt
-      - https://raw.githubusercontent.com/hagezi/dns-blocklists/refs/heads/main/dnsmasq/pro.plus.txt
-      - https://raw.githubusercontent.com/hagezi/dns-blocklists/refs/heads/main/dnsmasq/popupads.txt
+      - https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/dnsmasq/ultimate.txt
+      - https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/dnsmasq/pro.plus.txt
+      - https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/dnsmasq/popupads.txt
+      - https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/dnsmasq/fake.txt
     yandex:
       - https://raw.githubusercontent.com/1andrevich/Re-filter-lists/main/domains_all.lst
+      - https://easylist-downloads.adblockplus.org/advblock.txt
       - https://raw.githubusercontent.com/Zalexanninev15/NoADS_RU/main/ads_list.txt
+      - https://filters.adtidy.org/extension/chromium/filters/1.txt
     malware:
-      - https://raw.githubusercontent.com/hagezi/dns-blocklists/refs/heads/main/dnsmasq/tif.mini.txt
+      - https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/dnsmasq/tif.medium.txt
   clientGroupsBlock:
     default:
       - ads
