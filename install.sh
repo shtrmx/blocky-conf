@@ -204,22 +204,33 @@ bootstrapDns:
 blocking:
   denylists:
     ads:
-      - https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/wildcard/pro.txt
+      - https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/wildcard/pro.plus.txt
       - https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/wildcard/popupads.txt
       - https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/wildcard/fake.txt
+    native-trackers:
+      - https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/wildcard/native.amazon.txt
+      - https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/wildcard/native.samsung.txt
     ru-ads:
       - https://raw.githubusercontent.com/Zalexanninev15/NoADS_RU/main/hosts/blocker.txt
+      - https://raw.githubusercontent.com/Zalexanninev15/NoADS_RU/main/hosts/blockerFL.txt
     malware:
       - https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/wildcard/tif.txt
+      - https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/wildcard/tif.medium.txt
+      - https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/wildcard/badware.hoster.txt
+      - https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/wildcard/dyndns.txt
+    abused-tlds:
+      - https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/wildcard/tld.txt
   clientGroupsBlock:
     default:
       - ads
+      - native-trackers
       - ru-ads
       - malware
+      - abused-tlds
   blockType: zeroIp
   blockTTL: 6h
   loading:
-    refreshPeriod: 12h
+    refreshPeriod: 24h
     downloads:
       timeout: 60s
       attempts: 3
@@ -408,7 +419,7 @@ menu() {
 main() {
   require_root
   install_gum
-  gum style --border double --padding "1 4" --foreground 213 --bold "B.I.M. v1.2.0"
+  gum style --border double --padding "1 4" --foreground 213 --bold "B.I.M. v1.3.0"
   menu
 }
 
