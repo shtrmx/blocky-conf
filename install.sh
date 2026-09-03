@@ -401,7 +401,7 @@ menu() {
 main() {
   require_root
   install_gum
-  gum style --border double --padding "1 4" --foreground 213 --bold "Blocky Installer & Manager v1.0.1"
+  gum style --border double --padding "1 4" --foreground 213 --bold "B.I.M. v1.0.1"
   menu
 }
 
