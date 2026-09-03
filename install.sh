@@ -201,21 +201,24 @@ bootstrapDns:
 blocking:
   denylists:
     ads:
-      - https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/dnsmasq/ultimate.txt
       - https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/dnsmasq/pro.plus.txt
       - https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/dnsmasq/popupads.txt
       - https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/dnsmasq/fake.txt
-    yandex:
-      - https://raw.githubusercontent.com/1andrevich/Re-filter-lists/main/domains_all.lst
-      - https://easylist-downloads.adblockplus.org/advblock.txt
-      - https://raw.githubusercontent.com/Zalexanninev15/NoADS_RU/main/ads_list.txt
-      - https://filters.adtidy.org/extension/chromium/filters/1.txt
+      - https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/dnsmasq/native.amazon.txt
+      - https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/dnsmasq/native.samsung.txt
+    tracking:
+      - https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/dnsmasq/tif.medium.txt
+      - https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/dnsmasq/spam-tlds-ultimate.txt
+    ru-ads:
+      - https://raw.githubusercontent.com/Zalexanninev15/NoADS_RU/main/hosts/blocker.txt
+      - https://raw.githubusercontent.com/Zalexanninev15/NoADS_RU/main/hosts/blockerFL.txt
     malware:
       - https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/dnsmasq/tif.txt
   clientGroupsBlock:
     default:
       - ads
-      - yandex
+      - tracking
+      - ru-ads
       - malware
   blockType: zeroIp
   blockTTL: 6h
