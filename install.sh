@@ -202,7 +202,7 @@ blocking:
   denylists:
     ads:
       - https://raw.githubusercontent.com/hagezi/dns-blocklists/refs/heads/main/dnsmasq/ultimate.mini.txt
-      https://raw.githubusercontent.com/hagezi/dns-blocklists/refs/heads/main/dnsmasq/pro.plus.txt
+      - https://raw.githubusercontent.com/hagezi/dns-blocklists/refs/heads/main/dnsmasq/pro.plus.txt
       - https://raw.githubusercontent.com/hagezi/dns-blocklists/refs/heads/main/dnsmasq/popupads.txt
     yandex:
       - https://raw.githubusercontent.com/1andrevich/Re-filter-lists/main/domains_all.lst
@@ -401,7 +401,7 @@ menu() {
 main() {
   require_root
   install_gum
-  gum style --border double --padding "1 4" --foreground 213 --bold "Blocky Installer & Manager v1.0"
+  gum style --border double --padding "1 4" --foreground 213 --bold "Blocky Installer & Manager v1.0.1"
   menu
 }
 
