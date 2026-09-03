@@ -201,19 +201,17 @@ bootstrapDns:
 blocking:
   denylists:
     ads:
-      - https://raw.githubusercontent.com/hagezi/dns-blocklists/main/hosts/pro.txt
-      - https://raw.githubusercontent.com/hagezi/dns-blocklists/main/hosts/popupads.txt
-    youtube:
-      - https://raw.githubusercontent.com/hagezi/dns-blocklists/main/hosts/native.youtube.txt
+      - https://raw.githubusercontent.com/hagezi/dns-blocklists/refs/heads/main/dnsmasq/ultimate.mini.txt
+      https://raw.githubusercontent.com/hagezi/dns-blocklists/refs/heads/main/dnsmasq/pro.plus.txt
+      - https://raw.githubusercontent.com/hagezi/dns-blocklists/refs/heads/main/dnsmasq/popupads.txt
     yandex:
       - https://raw.githubusercontent.com/1andrevich/Re-filter-lists/main/domains_all.lst
       - https://raw.githubusercontent.com/Zalexanninev15/NoADS_RU/main/ads_list.txt
     malware:
-      - https://raw.githubusercontent.com/hagezi/dns-blocklists/main/hosts/tif.txt
+      - https://raw.githubusercontent.com/hagezi/dns-blocklists/refs/heads/main/dnsmasq/tif.mini.txt
   clientGroupsBlock:
     default:
       - ads
-      - youtube
       - yandex
       - malware
   blockType: zeroIp
