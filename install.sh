@@ -201,23 +201,19 @@ bootstrapDns:
 blocking:
   denylists:
     ads:
-      - https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/dnsmasq/pro.plus.txt
+      - https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/dnsmasq/pro.txt
       - https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/dnsmasq/popupads.txt
       - https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/dnsmasq/fake.txt
-      - https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/dnsmasq/native.amazon.txt
-      - https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/dnsmasq/native.samsung.txt
-    tracking:
-      - https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/dnsmasq/tif.medium.txt
-      - https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/dnsmasq/spam-tlds-ultimate.txt
     ru-ads:
       - https://raw.githubusercontent.com/Zalexanninev15/NoADS_RU/main/hosts/blocker.txt
-      - https://raw.githubusercontent.com/Zalexanninev15/NoADS_RU/main/hosts/blockerFL.txt
     malware:
       - https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/dnsmasq/tif.txt
+  allowlists:
+    ads:
+      - https://raw.githubusercontent.com/hagezi/dns-blocklists/main/whitelist-referral.txt
   clientGroupsBlock:
     default:
       - ads
-      - tracking
       - ru-ads
       - malware
   blockType: zeroIp
@@ -407,7 +403,7 @@ menu() {
 main() {
   require_root
   install_gum
-  gum style --border double --padding "1 4" --foreground 213 --bold "B.I.M. v1.1.2"
+  gum style --border double --padding "1 4" --foreground 213 --bold "B.I.M. v1.1.3"
   menu
 }
 
